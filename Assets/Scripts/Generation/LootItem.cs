@@ -10,7 +10,6 @@ public enum LootRarity
 }
 
 // tiny script on the loot prefab — just colors the sprite by rarity
-// (серенький — обычный, голубенький — нормас, золотой — вау ヽ(°〇°)ﾉ)
 public class LootItem : MonoBehaviour
 {
     public SpriteRenderer sprite; // drag SpriteRenderer of the loot prefab

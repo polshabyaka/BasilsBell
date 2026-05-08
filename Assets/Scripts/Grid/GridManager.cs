@@ -26,7 +26,7 @@ public class GridManager : MonoBehaviour
     public LootItem lootPrefab;          // простой кружочек с LootItem скриптом
     public int commonMaxDistance = 4;    // d <= это -> common
     public int rareMinDistance = 10;     // d >= это -> rare (между ними uncommon)
-    public int commonLootCount = 6;
+    public const int commonLootCount = 6;
     public int uncommonLootCount = 4;
     public int rareLootCount = 2;
 
