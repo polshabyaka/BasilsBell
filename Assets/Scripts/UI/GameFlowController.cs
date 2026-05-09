@@ -48,7 +48,7 @@ public class GameFlowController : MonoBehaviour
         if (currentMode != GameMode.Forest) return;
         if (grid == null || grid.player == null) return;
 
-        bool canReturn = IsPlayerOnReturnCell();
+        bool canReturn = IsPlayerNearReturnCell();
 
         if (returnToShopButton != null)
             returnToShopButton.gameObject.SetActive(canReturn);
@@ -95,20 +95,23 @@ public class GameFlowController : MonoBehaviour
     public void ReturnFromForest()
     {
         if (currentMode != GameMode.Forest) return;
-        if (!IsPlayerOnReturnCell()) return;
+        if (!IsPlayerNearReturnCell()) return;
 
         EnterShop();
     }
-
-    bool IsPlayerOnReturnCell()
+    bool IsPlayerNearReturnCell()
     {
-        if (grid == null || grid.player == null) return false;
+    if (grid == null || grid.player == null) return false;
 
-        int homeX = grid.width / 2;
-        int homeY = grid.height / 2;
+    int homeX = grid.width / 2;
+    int homeY = grid.height / 2;
 
-        return grid.player.gridX == homeX && grid.player.gridY == homeY;
+    int dx = Mathf.Abs(grid.player.gridX - homeX);
+    int dy = Mathf.Abs(grid.player.gridY - homeY);
+
+    return dx <= 1 && dy <= 1;
     }
+
 
     void HideReturnPrompt()
     {
