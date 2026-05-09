@@ -56,8 +56,6 @@ public class GameFlowController : MonoBehaviour
         if (hintText != null)
         {
             hintText.gameObject.SetActive(canReturn);
-            if (canReturn)
-                hintText.text = "Return to shop";
         }
 
         if (canReturn && Input.GetKeyDown(KeyCode.T))
