@@ -29,6 +29,10 @@ public class Player : MonoBehaviour
     // пока true — не слушаем никакой ввод (клавиши, мышь, шаги A*)
     public bool inputLocked;
 
+    public bool IsMoving => isMoving;
+    public bool HasQueuedPath => path != null && pathIndex < path.Count;
+    public bool IsBusy => isMoving || HasQueuedPath;
+
     // кэшируем камеру один раз, чтоб не дёргать Camera.main каждый клик
     Camera cam;
 

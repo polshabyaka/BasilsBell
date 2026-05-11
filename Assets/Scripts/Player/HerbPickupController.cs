@@ -28,7 +28,7 @@ public class HerbPickupController : MonoBehaviour
 
     bool TryPickupNearPlayer()
     {
-        if (!HasPickupReferences()) return false;
+        if (!CanTryPickup()) return false;
 
         int playerX = grid.player.gridX;
         int playerY = grid.player.gridY;
@@ -68,7 +68,7 @@ public class HerbPickupController : MonoBehaviour
 
     bool TryPickupFromScreenPosition(Vector2 screenPosition)
     {
-        if (!HasPickupReferences()) return false;
+        if (!CanTryPickup()) return false;
         if (worldCamera == null) return false;
 
         Vector3 worldPosition = worldCamera.ScreenToWorldPoint(screenPosition);
@@ -87,10 +87,13 @@ public class HerbPickupController : MonoBehaviour
     {
         if (!IsInsideGrid(x, y)) return false;
 
-        if (!grid.TryPickupLootAt(x, y))
+        if (!grid.TryPickupHerbAt(x, y, out HerbType pickedType))
             return false;
 
-        inventory.AddHerb(fallbackHerbType);
+        if (!IsKnownHerbType(pickedType))
+            pickedType = fallbackHerbType;
+
+        inventory.AddHerb(pickedType);
         return true;
     }
 
@@ -111,6 +114,32 @@ public class HerbPickupController : MonoBehaviour
     bool HasPickupReferences()
     {
         return grid != null && grid.player != null && inventory != null;
+    }
+
+    bool CanTryPickup()
+    {
+        if (!HasPickupReferences()) return false;
+        if (grid.player.inputLocked) return false;
+        if (grid.player.IsBusy) return false;
+
+        return true;
+    }
+
+    bool IsKnownHerbType(HerbType type)
+    {
+        switch (type)
+        {
+            case HerbType.BellLeaf:
+            case HerbType.LavenderFern:
+            case HerbType.ButtonRoot:
+            case HerbType.HoneyClover:
+            case HerbType.WarmNettle:
+            case HerbType.SleepGrass:
+            case HerbType.Glowberry:
+                return true;
+            default:
+                return false;
+        }
     }
 
     bool IsPointerOverUI(int pointerId = -1)

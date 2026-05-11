@@ -1,16 +1,5 @@
 using UnityEngine;
 
-public enum HerbType
-{
-    BellLeaf,
-    LavenderFern,
-    ButtonRoot,
-    HoneyClover,
-    WarmNettle,
-    SleepGrass,
-    Glowberry
-}
-
 public class HerbInventory : MonoBehaviour
 {
     [Header("Herb Counts")]

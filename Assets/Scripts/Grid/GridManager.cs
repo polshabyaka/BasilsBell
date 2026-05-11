@@ -413,6 +413,7 @@ public class GridManager : MonoBehaviour
 
             LootItem loot = Instantiate(lootPrefab, pos, Quaternion.identity, mapRoot);
             loot.SetRarity(rarity);
+            loot.SetHerbType(GetRandomHerbForRarity(rarity));
             loot.gameObject.SetActive(false); // пока туман — прячем сразу, RevealArea откроет что надо
             activeLoot.Add(loot.gameObject);
             activeLootCells.Add(picked);
@@ -420,6 +421,31 @@ public class GridManager : MonoBehaviour
             placed++;
         }
         // если band закончился а слотов не добрали — просто кладём сколько получилось
+    }
+
+    HerbType GetRandomHerbForRarity(LootRarity rarity)
+    {
+        if (rarity == LootRarity.Rare)
+            return HerbType.Glowberry;
+
+        if (rarity == LootRarity.Uncommon)
+        {
+            int roll = Random.Range(0, 2);
+            if (roll == 0)
+                return HerbType.ButtonRoot;
+
+            return HerbType.HoneyClover;
+        }
+
+        int commonRoll = Random.Range(0, 4);
+        if (commonRoll == 0)
+            return HerbType.BellLeaf;
+        if (commonRoll == 1)
+            return HerbType.LavenderFern;
+        if (commonRoll == 2)
+            return HerbType.WarmNettle;
+
+        return HerbType.SleepGrass;
     }
 
     // Chebyshev <= 1 check: same cell or any of the 8 neighbors counts as too close
@@ -462,18 +488,33 @@ public class GridManager : MonoBehaviour
     // возвращает true если что-то реально забрали с этой клетки
     public bool TryPickupLootAt(int x, int y)
     {
+        return TryPickupHerbAt(x, y, out _);
+    }
+
+    public bool TryPickupHerbAt(int x, int y, out HerbType herbType)
+    {
         for (int i = 0; i < activeLootCells.Count; i++)
         {
             Vector2Int p = activeLootCells[i];
             if (p.x == x && p.y == y)
             {
                 // сносим объект и чистим оба параллельных списка
-                if (activeLoot[i] != null) Destroy(activeLoot[i]);
+                herbType = HerbType.BellLeaf;
+                if (activeLoot[i] != null)
+                {
+                    LootItem loot = activeLoot[i].GetComponent<LootItem>();
+                    if (loot != null)
+                        herbType = loot.GetHerbType();
+
+                    Destroy(activeLoot[i]);
+                }
                 activeLoot.RemoveAt(i);
                 activeLootCells.RemoveAt(i);
                 return true;
             }
         }
+
+        herbType = HerbType.BellLeaf;
         return false;
     }
 
