@@ -130,7 +130,7 @@ public class Player : MonoBehaviour
     {
         int dx = Mathf.Abs(x - gridX);
         int dy = Mathf.Abs(y - gridY);
-        return dx <= 1 && dy <= 1 && !(dx == 0 && dy == 0);
+        return dx + dy == 1;
     }
 
     public void IgnoreClickToMoveThisFrame()

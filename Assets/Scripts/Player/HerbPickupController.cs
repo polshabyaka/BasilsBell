@@ -10,6 +10,14 @@ public class HerbPickupController : MonoBehaviour
     [SerializeField] int pickupRadius = 1;
     [SerializeField] HerbType fallbackHerbType = HerbType.BellLeaf;
 
+    static readonly Vector2Int[] CardinalDirections =
+    {
+        new Vector2Int(0, 1),
+        new Vector2Int(0, -1),
+        new Vector2Int(-1, 0),
+        new Vector2Int(1, 0)
+    };
+
     bool hasPendingPickup;
     Vector2Int pendingPickupCell;
 
@@ -40,15 +48,15 @@ public class HerbPickupController : MonoBehaviour
         int playerY = grid.player.gridY;
         int radius = Mathf.Clamp(pickupRadius, 0, 1);
 
-        for (int dy = -radius; dy <= radius; dy++)
-        {
-            for (int dx = -radius; dx <= radius; dx++)
-            {
-                if (dx == 0 && dy == 0) continue;
+        if (radius <= 0)
+            return false;
 
-                if (TryPickupAt(playerX + dx, playerY + dy))
-                    return true;
-            }
+        for (int i = 0; i < CardinalDirections.Length; i++)
+        {
+            Vector2Int direction = CardinalDirections[i];
+
+            if (TryPickupAt(playerX + direction.x, playerY + direction.y))
+                return true;
         }
 
         return false;
@@ -166,28 +174,24 @@ public class HerbPickupController : MonoBehaviour
         bool foundTarget = false;
         int bestPathLength = int.MaxValue;
 
-        for (int dy = -1; dy <= 1; dy++)
+        for (int i = 0; i < CardinalDirections.Length; i++)
         {
-            for (int dx = -1; dx <= 1; dx++)
+            Vector2Int direction = CardinalDirections[i];
+            int x = herbX + direction.x;
+            int y = herbY + direction.y;
+            if (!grid.IsInsideGrid(x, y)) continue;
+            if (grid.cells[x, y].type == CellType.Forest) continue;
+            if (grid.cells[x, y].visibility == CellVisibility.Unseen) continue;
+            if (grid.HasActiveLootAt(x, y)) continue;
+
+            List<Vector2Int> path = Pathfinder.FindPath(grid, grid.player.gridX, grid.player.gridY, x, y);
+            if (path == null || path.Count <= 1) continue;
+
+            if (path.Count < bestPathLength)
             {
-                if (dx == 0 && dy == 0) continue;
-
-                int x = herbX + dx;
-                int y = herbY + dy;
-                if (!grid.IsInsideGrid(x, y)) continue;
-                if (grid.cells[x, y].type == CellType.Forest) continue;
-                if (grid.cells[x, y].visibility == CellVisibility.Unseen) continue;
-                if (grid.HasActiveLootAt(x, y)) continue;
-
-                List<Vector2Int> path = Pathfinder.FindPath(grid, grid.player.gridX, grid.player.gridY, x, y);
-                if (path == null || path.Count <= 1) continue;
-
-                if (path.Count < bestPathLength)
-                {
-                    bestPathLength = path.Count;
-                    moveTarget = new Vector2Int(x, y);
-                    foundTarget = true;
-                }
+                bestPathLength = path.Count;
+                moveTarget = new Vector2Int(x, y);
+                foundTarget = true;
             }
         }
 
