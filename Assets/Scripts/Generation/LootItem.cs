@@ -12,7 +12,7 @@ public enum LootRarity
 // tiny script on the loot prefab — just colors the sprite by rarity
 public class LootItem : MonoBehaviour
 {
-    public SpriteRenderer sprite; // drag SpriteRenderer of the loot prefab
+    [SerializeField] SpriteRenderer sprite; // drag SpriteRenderer of the loot prefab
     Sprite fallbackSprite;
 
     // colors per rarity, tweak in inspector if you want
@@ -34,6 +34,9 @@ public class LootItem : MonoBehaviour
 
     void Awake()
     {
+        if (sprite == null)
+            sprite = GetComponentInChildren<SpriteRenderer>();
+
         if (sprite != null)
             fallbackSprite = sprite.sprite;
     }
@@ -41,8 +44,7 @@ public class LootItem : MonoBehaviour
     public void SetRarity(LootRarity r)
     {
         rarity = r;
-        if (sprite != null)
-            ApplyRarityColor();
+        RefreshVisual();
     }
 
     public void SetHerbType(HerbType type)

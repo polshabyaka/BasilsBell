@@ -35,6 +35,7 @@ public class Player : MonoBehaviour
 
     // кэшируем камеру один раз, чтоб не дёргать Camera.main каждый клик
     Camera cam;
+    int ignoreClickToMoveFrame = -1;
 
     void Start()
     {
@@ -102,16 +103,39 @@ public class Player : MonoBehaviour
     // мышь -> клетка -> A* -> запомнить маршрут
     void TryClickToMove()
     {
+        if (ignoreClickToMoveFrame == Time.frameCount) return;
+
         Vector3 world = cam.ScreenToWorldPoint(Input.mousePosition);
         world.z = 0f;
 
         if (!grid.TryWorldToGrid(world, out int tx, out int ty)) return;
+        if (grid.HasActiveLootAt(tx, ty)) return;
 
-        List<Vector2Int> found = Pathfinder.FindPath(grid, gridX, gridY, tx, ty);
-        if (found == null || found.Count <= 1) return; // нет пути или та же клетка
+        TryMoveToCell(tx, ty);
+    }
+
+    public bool TryMoveToCell(int targetX, int targetY)
+    {
+        if (grid == null) return false;
+
+        List<Vector2Int> found = Pathfinder.FindPath(grid, gridX, gridY, targetX, targetY);
+        if (found == null || found.Count <= 1) return false; // нет пути или та же клетка
 
         path = found;
         pathIndex = 1; // нулевой элемент — это мы сами, пропускаем
+        return true;
+    }
+
+    public bool IsAdjacentToCell(int x, int y)
+    {
+        int dx = Mathf.Abs(x - gridX);
+        int dy = Mathf.Abs(y - gridY);
+        return dx <= 1 && dy <= 1 && !(dx == 0 && dy == 0);
+    }
+
+    public void IgnoreClickToMoveThisFrame()
+    {
+        ignoreClickToMoveFrame = Time.frameCount;
     }
 
     // манул-шаг с клавиатуры — он всегда перебивает автопуть
@@ -131,6 +155,7 @@ public class Player : MonoBehaviour
 
         // в лес не ходим, там волки ( ˘･_･˘ )
         if (grid.cells[nx, ny].type == CellType.Forest) return;
+        if (grid.HasActiveLootAt(nx, ny)) return;
 
         gridX = nx;
         gridY = ny;

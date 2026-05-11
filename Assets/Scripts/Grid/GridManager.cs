@@ -518,6 +518,32 @@ public class GridManager : MonoBehaviour
         return false;
     }
 
+    // active pickup lookup for movement and tap checks
+    public bool HasActiveLootAt(int x, int y)
+    {
+        for (int i = 0; i < activeLootCells.Count; i++)
+        {
+            Vector2Int p = activeLootCells[i];
+            if (p.x == x && p.y == y)
+                return activeLoot[i] != null;
+        }
+
+        return false;
+    }
+
+    public bool TryGetLootCellFromWorld(Vector3 world, out int x, out int y)
+    {
+        if (!TryWorldToGrid(world, out x, out y))
+            return false;
+
+        return HasActiveLootAt(x, y);
+    }
+
+    public bool IsInsideGrid(int x, int y)
+    {
+        return x >= 0 && x < width && y >= 0 && y < height;
+    }
+
     // сколько сейчас лута на карте — LevelGoal берёт это как total "Y"
     public int LootCount { get { return activeLoot.Count; } }
 

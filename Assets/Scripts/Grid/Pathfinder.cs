@@ -112,6 +112,7 @@ public static class Pathfinder
         CellData c = grid.cells[x, y];
         if (c.type == CellType.Forest) return false;
         if (c.visibility == CellVisibility.Unseen) return false;
+        if (grid.HasActiveLootAt(x, y)) return false;
         return true;
     }
 

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -9,6 +10,9 @@ public class HerbPickupController : MonoBehaviour
     [SerializeField] int pickupRadius = 1;
     [SerializeField] HerbType fallbackHerbType = HerbType.BellLeaf;
 
+    bool hasPendingPickup;
+    Vector2Int pendingPickupCell;
+
     void Awake()
     {
         if (worldCamera == null)
@@ -17,6 +21,8 @@ public class HerbPickupController : MonoBehaviour
 
     void Update()
     {
+        TryCompletePendingPickup();
+
         if (Input.GetKeyDown(KeyCode.E))
         {
             if (TryPickupNearPlayer())
@@ -32,10 +38,7 @@ public class HerbPickupController : MonoBehaviour
 
         int playerX = grid.player.gridX;
         int playerY = grid.player.gridY;
-        int radius = Mathf.Max(0, pickupRadius);
-
-        if (TryPickupAt(playerX, playerY))
-            return true;
+        int radius = Mathf.Clamp(pickupRadius, 0, 1);
 
         for (int dy = -radius; dy <= radius; dy++)
         {
@@ -57,18 +60,18 @@ public class HerbPickupController : MonoBehaviour
         {
             Touch touch = Input.GetTouch(0);
             if (touch.phase == TouchPhase.Ended && !IsPointerOverUI(touch.fingerId))
-                TryPickupFromScreenPosition(touch.position);
+                TryHandleHerbTapFromScreenPosition(touch.position);
 
             return;
         }
 
         if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
-            TryPickupFromScreenPosition(Input.mousePosition);
+            TryHandleHerbTapFromScreenPosition(Input.mousePosition);
     }
 
-    bool TryPickupFromScreenPosition(Vector2 screenPosition)
+    bool TryHandleHerbTapFromScreenPosition(Vector2 screenPosition)
     {
-        if (!CanTryPickup()) return false;
+        if (!HasPickupReferences()) return false;
         if (worldCamera == null) return false;
 
         Vector3 worldPosition = worldCamera.ScreenToWorldPoint(screenPosition);
@@ -77,15 +80,33 @@ public class HerbPickupController : MonoBehaviour
         if (!grid.TryWorldToGrid(worldPosition, out int x, out int y))
             return false;
 
-        if (!IsWithinPickupRadius(x, y))
+        if (!grid.HasActiveLootAt(x, y))
             return false;
 
-        return TryPickupAt(x, y);
+        grid.player.IgnoreClickToMoveThisFrame();
+
+        if (!CanTryPickup()) return true;
+
+        if (grid.player.IsAdjacentToCell(x, y))
+        {
+            ClearPendingPickup();
+            TryPickupAt(x, y);
+            return true;
+        }
+
+        if (FindBestAdjacentCellToHerb(x, y, out Vector2Int moveTarget)
+            && grid.player.TryMoveToCell(moveTarget.x, moveTarget.y))
+        {
+            pendingPickupCell = new Vector2Int(x, y);
+            hasPendingPickup = true;
+        }
+
+        return true;
     }
 
     bool TryPickupAt(int x, int y)
     {
-        if (!IsInsideGrid(x, y)) return false;
+        if (grid == null || !grid.IsInsideGrid(x, y)) return false;
 
         if (!grid.TryPickupHerbAt(x, y, out HerbType pickedType))
             return false;
@@ -95,20 +116,6 @@ public class HerbPickupController : MonoBehaviour
 
         inventory.AddHerb(pickedType);
         return true;
-    }
-
-    bool IsWithinPickupRadius(int x, int y)
-    {
-        int radius = Mathf.Max(0, pickupRadius);
-        int dx = Mathf.Abs(x - grid.player.gridX);
-        int dy = Mathf.Abs(y - grid.player.gridY);
-        return dx <= radius && dy <= radius;
-    }
-
-    bool IsInsideGrid(int x, int y)
-    {
-        if (grid == null) return false;
-        return x >= 0 && x < grid.width && y >= 0 && y < grid.height;
     }
 
     bool HasPickupReferences()
@@ -123,6 +130,74 @@ public class HerbPickupController : MonoBehaviour
         if (grid.player.IsBusy) return false;
 
         return true;
+    }
+
+    void TryCompletePendingPickup()
+    {
+        if (!hasPendingPickup) return;
+
+        if (!HasPickupReferences())
+        {
+            ClearPendingPickup();
+            return;
+        }
+
+        if (!grid.HasActiveLootAt(pendingPickupCell.x, pendingPickupCell.y))
+        {
+            ClearPendingPickup();
+            return;
+        }
+
+        if (grid.player.inputLocked) return;
+        if (grid.player.IsBusy) return;
+
+        if (grid.player.IsAdjacentToCell(pendingPickupCell.x, pendingPickupCell.y))
+        {
+            TryPickupAt(pendingPickupCell.x, pendingPickupCell.y);
+            ClearPendingPickup();
+        }
+    }
+
+    bool FindBestAdjacentCellToHerb(int herbX, int herbY, out Vector2Int moveTarget)
+    {
+        moveTarget = Vector2Int.zero;
+        if (!HasPickupReferences()) return false;
+
+        bool foundTarget = false;
+        int bestPathLength = int.MaxValue;
+
+        for (int dy = -1; dy <= 1; dy++)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+
+                int x = herbX + dx;
+                int y = herbY + dy;
+                if (!grid.IsInsideGrid(x, y)) continue;
+                if (grid.cells[x, y].type == CellType.Forest) continue;
+                if (grid.cells[x, y].visibility == CellVisibility.Unseen) continue;
+                if (grid.HasActiveLootAt(x, y)) continue;
+
+                List<Vector2Int> path = Pathfinder.FindPath(grid, grid.player.gridX, grid.player.gridY, x, y);
+                if (path == null || path.Count <= 1) continue;
+
+                if (path.Count < bestPathLength)
+                {
+                    bestPathLength = path.Count;
+                    moveTarget = new Vector2Int(x, y);
+                    foundTarget = true;
+                }
+            }
+        }
+
+        return foundTarget;
+    }
+
+    void ClearPendingPickup()
+    {
+        hasPendingPickup = false;
+        pendingPickupCell = Vector2Int.zero;
     }
 
     bool IsKnownHerbType(HerbType type)
