@@ -95,7 +95,7 @@ public class HerbPickupController : MonoBehaviour
 
         if (!CanTryPickup()) return true;
 
-        if (grid.player.IsAdjacentToCell(x, y))
+        if (IsCardinalAdjacentToHerb(x, y))
         {
             ClearPendingPickup();
             TryPickupAt(x, y);
@@ -159,11 +159,18 @@ public class HerbPickupController : MonoBehaviour
         if (grid.player.inputLocked) return;
         if (grid.player.IsBusy) return;
 
-        if (grid.player.IsAdjacentToCell(pendingPickupCell.x, pendingPickupCell.y))
+        if (IsCardinalAdjacentToHerb(pendingPickupCell.x, pendingPickupCell.y))
         {
             TryPickupAt(pendingPickupCell.x, pendingPickupCell.y);
             ClearPendingPickup();
         }
+    }
+
+    bool IsCardinalAdjacentToHerb(int herbX, int herbY)
+    {
+        int dx = Mathf.Abs(grid.player.gridX - herbX);
+        int dy = Mathf.Abs(grid.player.gridY - herbY);
+        return (dx == 1 && dy == 0) || (dx == 0 && dy == 1);
     }
 
     bool FindBestAdjacentCellToHerb(int herbX, int herbY, out Vector2Int moveTarget)

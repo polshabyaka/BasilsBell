@@ -26,9 +26,10 @@ public class GridManager : MonoBehaviour
     public LootItem lootPrefab;          // простой кружочек с LootItem скриптом
     public int commonMaxDistance = 4;    // d <= это -> common
     public int rareMinDistance = 10;     // d >= это -> rare (между ними uncommon)
-    public const int commonLootCount = 6;
-    public int uncommonLootCount = 4;
-    public int rareLootCount = 2;
+    [SerializeField] Vector2Int commonHerbCountRange = new Vector2Int(7, 11);
+    [SerializeField] Vector2Int uncommonHerbCountRange = new Vector2Int(3, 6);
+    [SerializeField] Vector2Int rareHerbCountRange = new Vector2Int(0, 2);
+    [SerializeField] int minHerbDistanceFromHome = 3;
 
     // fog of war: радиус открытия вокруг игрока (и вокруг дома на старте)
     public int revealRadius = 3;
@@ -311,9 +312,10 @@ public class GridManager : MonoBehaviour
         for (int i = 0; i < activeLoot.Count; i++)
         {
             Vector2Int cellPos = activeLootCells[i];
-            bool visible = cells[cellPos.x, cellPos.y].visibility == CellVisibility.Visible;
+            CellVisibility visibility = cells[cellPos.x, cellPos.y].visibility;
+            bool shouldShow = visibility == CellVisibility.Visible || visibility == CellVisibility.Explored;
             if (activeLoot[i] != null)
-                activeLoot[i].SetActive(visible);
+                activeLoot[i].SetActive(shouldShow);
         }
     }
 
@@ -366,6 +368,7 @@ public class GridManager : MonoBehaviour
             {
                 int d = cells[x, y].distanceFromHome;
                 if (d <= 0) continue; // пропускаем Home (d==0) и недостижимые (d==-1)
+                if (d < minHerbDistanceFromHome) continue;
 
                 Vector2Int p = new Vector2Int(x, y);
                 if (d <= commonMaxDistance)
@@ -380,9 +383,13 @@ public class GridManager : MonoBehaviour
         // shared across rarities: никто ни с кем не встанет вплотную
         List<Vector2Int> takenCells = new List<Vector2Int>();
 
-        SpawnLootBand(commonCells, commonLootCount, LootRarity.Common, takenCells);
-        SpawnLootBand(uncommonCells, uncommonLootCount, LootRarity.Uncommon, takenCells);
-        SpawnLootBand(rareCells, rareLootCount, LootRarity.Rare, takenCells);
+        int commonCount = Random.Range(commonHerbCountRange.x, commonHerbCountRange.y + 1);
+        int uncommonCount = Random.Range(uncommonHerbCountRange.x, uncommonHerbCountRange.y + 1);
+        int rareCount = Random.Range(rareHerbCountRange.x, rareHerbCountRange.y + 1);
+
+        SpawnLootBand(commonCells, commonCount, LootRarity.Common, takenCells);
+        SpawnLootBand(uncommonCells, uncommonCount, LootRarity.Uncommon, takenCells);
+        SpawnLootBand(rareCells, rareCount, LootRarity.Rare, takenCells);
     }
 
     // берём count случайных клеток без повторов и ставим на них лут
