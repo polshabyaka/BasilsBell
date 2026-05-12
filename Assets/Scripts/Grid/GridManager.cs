@@ -29,7 +29,7 @@ public class GridManager : MonoBehaviour
     [SerializeField] Vector2Int commonHerbCountRange = new Vector2Int(7, 11);
     [SerializeField] Vector2Int uncommonHerbCountRange = new Vector2Int(3, 6);
     [SerializeField] Vector2Int rareHerbCountRange = new Vector2Int(0, 2);
-    [SerializeField] int minHerbDistanceFromHome = 3;
+    [SerializeField] int homeHerbExclusionRadius = 3;
 
     // fog of war: радиус открытия вокруг игрока (и вокруг дома на старте)
     public int revealRadius = 3;
@@ -368,7 +368,7 @@ public class GridManager : MonoBehaviour
             {
                 int d = cells[x, y].distanceFromHome;
                 if (d <= 0) continue; // пропускаем Home (d==0) и недостижимые (d==-1)
-                if (d < minHerbDistanceFromHome) continue;
+                if (IsInHomeHerbExclusionArea(x, y)) continue;
 
                 Vector2Int p = new Vector2Int(x, y);
                 if (d <= commonMaxDistance)
@@ -453,6 +453,14 @@ public class GridManager : MonoBehaviour
             return HerbType.WarmNettle;
 
         return HerbType.SleepGrass;
+    }
+
+    bool IsInHomeHerbExclusionArea(int x, int y)
+    {
+        int homeX = width / 2;
+        int homeY = height / 2;
+        int distance = Mathf.Abs(x - homeX) + Mathf.Abs(y - homeY);
+        return distance <= homeHerbExclusionRadius;
     }
 
     // Chebyshev <= 1 check: same cell or any of the 8 neighbors counts as too close

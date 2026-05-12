@@ -33,6 +33,12 @@ public class CellView : MonoBehaviour
 
         if (visibility == CellVisibility.Explored)
         {
+            if (type == CellType.Home)
+            {
+                sprite.color = baseColor;
+                return;
+            }
+
             // тусклая версия того же цвета + немножко прозрачности
             Color dim = new Color(
                 baseColor.r * exploredDarken,

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 // grid-step movement with a little slide between cells
 // зажал клавишу — шагаем дальше; ЛКМ по клетке — автопуть через A*
@@ -76,7 +77,7 @@ public class Player : MonoBehaviour
         if (inputLocked) return;
 
         // ЛКМ по клетке — прокладываем маршрут A*
-        if (Input.GetMouseButtonDown(0) && cam != null && grid != null)
+        if (Input.GetMouseButtonDown(0) && cam != null && grid != null && !IsPointerOverUI())
             TryClickToMove();
 
         // GetKey, чтобы зажатие продолжало шагать без долбёжки по клавише
@@ -136,6 +137,16 @@ public class Player : MonoBehaviour
     public void IgnoreClickToMoveThisFrame()
     {
         ignoreClickToMoveFrame = Time.frameCount;
+    }
+
+    bool IsPointerOverUI()
+    {
+        if (EventSystem.current == null) return false;
+
+        if (Input.touchCount > 0)
+            return EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
+
+        return EventSystem.current.IsPointerOverGameObject();
     }
 
     // манул-шаг с клавиатуры — он всегда перебивает автопуть

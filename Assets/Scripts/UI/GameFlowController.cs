@@ -35,6 +35,7 @@ public class GameFlowController : MonoBehaviour
         if (returnToShopButton != null)
             returnToShopButton.onClick.AddListener(ReturnFromForest);
 
+        ConfigureReturnPromptRaycasts();
         HideReturnPrompt();
 
         // Let GridManager start first while ForestRoot is still active.
@@ -95,7 +96,26 @@ public class GameFlowController : MonoBehaviour
         if (currentMode != GameMode.Forest) return;
         if (!IsPlayerNearReturnCell()) return;
 
+        if (grid != null && grid.player != null)
+            grid.player.IgnoreClickToMoveThisFrame();
+
         EnterShop();
+    }
+
+    void ConfigureReturnPromptRaycasts()
+    {
+        if (hintText != null)
+            hintText.raycastTarget = false;
+
+        if (returnToShopButton == null) return;
+
+        Graphic targetGraphic = returnToShopButton.targetGraphic;
+        Graphic[] graphics = returnToShopButton.GetComponentsInChildren<Graphic>(true);
+        for (int i = 0; i < graphics.Length; i++)
+        {
+            if (graphics[i] != targetGraphic)
+                graphics[i].raycastTarget = false;
+        }
     }
     bool IsPlayerNearReturnCell()
     {
