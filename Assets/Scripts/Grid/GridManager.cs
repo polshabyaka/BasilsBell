@@ -16,6 +16,10 @@ public class GridManager : MonoBehaviour
     public float noiseScale = 0.15f;      // чем меньше — тем крупнее пятна леса
     public float forestThreshold = 0.55f; // выше = меньше леса
 
+    [SerializeField] int maxConsecutiveForestCells = 5;
+    [SerializeField, Range(0f, 1f)] float denseForestGapFillChance = 0.45f;
+    [SerializeField, Range(0f, 1f)] float isolatedForestCullChance = 0.65f;
+
     // PCG validation thresholds, tweak in inspector
     public int minReachableCells = 50;       // минимум проходимых клеток из дома
     public int minFarDistance = 8;           // в шагах BFS от дома, не манхэттен
@@ -75,6 +79,7 @@ public class GridManager : MonoBehaviour
             float noiseOffsetY = Random.Range(0f, 9999f);
 
             GenerateCellData(noiseOffsetX, noiseOffsetY);
+            ApplyForestShapeRules();
             CarveSafeHomeArea(); // домик и 4 соседа всегда проходимы
             MarkHomeCell();
             FillDistanceMap();   // нужно для валидации и для лута
@@ -127,6 +132,158 @@ public class GridManager : MonoBehaviour
                 cells[x, y] = data;
             }
         }
+    }
+
+    // Small pass over generated forest blockers before validation.
+    void ApplyForestShapeRules()
+    {
+        FillDenseForestGaps();
+        CullMostIsolatedForestCells();
+        BreakLongForestRuns();
+    }
+
+    void FillDenseForestGaps()
+    {
+        bool[,] makeForest = new bool[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (cells[x, y].type == CellType.Forest) continue;
+                if (CountForestNeighbors(x, y) < 5) continue;
+                if (Random.value > denseForestGapFillChance) continue;
+
+                makeForest[x, y] = true;
+            }
+        }
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (makeForest[x, y])
+                    cells[x, y].type = CellType.Forest;
+            }
+        }
+    }
+
+    void CullMostIsolatedForestCells()
+    {
+        bool[,] makeNormal = new bool[width, height];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (cells[x, y].type != CellType.Forest) continue;
+                if (CountForestNeighbors(x, y) > 0) continue;
+                if (Random.value > isolatedForestCullChance) continue;
+
+                makeNormal[x, y] = true;
+            }
+        }
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (makeNormal[x, y])
+                    cells[x, y].type = CellType.Normal;
+            }
+        }
+    }
+
+    void BreakLongForestRuns()
+    {
+        int maxRun = Mathf.Max(1, maxConsecutiveForestCells);
+
+        BreakLongForestRunsInDirection(1, 0, maxRun);
+        BreakLongForestRunsInDirection(0, 1, maxRun);
+        BreakLongForestRunsInDirection(1, 1, maxRun);
+        BreakLongForestRunsInDirection(1, -1, maxRun);
+    }
+
+    void BreakLongForestRunsInDirection(int stepX, int stepY, int maxRun)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < height; y++)
+            {
+                if (!IsForestCell(x, y)) continue;
+
+                int prevX = x - stepX;
+                int prevY = y - stepY;
+                if (IsInsideGrid(prevX, prevY) && IsForestCell(prevX, prevY)) continue;
+
+                int runLength = CountForestRunLength(x, y, stepX, stepY);
+                if (runLength > maxRun)
+                    BreakForestRun(x, y, stepX, stepY, runLength, maxRun);
+            }
+        }
+    }
+
+    int CountForestRunLength(int startX, int startY, int stepX, int stepY)
+    {
+        int length = 0;
+        int x = startX;
+        int y = startY;
+
+        while (IsInsideGrid(x, y) && IsForestCell(x, y))
+        {
+            length++;
+            x += stepX;
+            y += stepY;
+        }
+
+        return length;
+    }
+
+    void BreakForestRun(int startX, int startY, int stepX, int stepY, int runLength, int maxRun)
+    {
+        int segmentStart = 0;
+        int remaining = runLength;
+
+        while (remaining > maxRun)
+        {
+            int minBreakOffset = Mathf.Max(1, maxRun - 1);
+            int maxBreakOffset = Mathf.Min(maxRun, remaining - 1);
+            int breakOffset = Random.Range(minBreakOffset, maxBreakOffset + 1);
+            int breakIndex = segmentStart + breakOffset;
+
+            int x = startX + stepX * breakIndex;
+            int y = startY + stepY * breakIndex;
+            if (IsInsideGrid(x, y))
+                cells[x, y].type = CellType.Normal;
+
+            segmentStart = breakIndex + 1;
+            remaining = runLength - segmentStart;
+        }
+    }
+
+    int CountForestNeighbors(int centerX, int centerY)
+    {
+        int count = 0;
+
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                if (dx == 0 && dy == 0) continue;
+
+                int x = centerX + dx;
+                int y = centerY + dy;
+                if (IsInsideGrid(x, y) && IsForestCell(x, y))
+                    count++;
+            }
+        }
+
+        return count;
+    }
+
+    bool IsForestCell(int x, int y)
+    {
+        return IsInsideGrid(x, y) && cells[x, y].type == CellType.Forest;
     }
 
     // спавним CellView-ы по готовым данным
