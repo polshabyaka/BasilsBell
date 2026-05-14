@@ -6,6 +6,7 @@ public class HerbPickupController : MonoBehaviour
 {
     [SerializeField] GridManager grid;
     [SerializeField] HerbInventory inventory;
+    [SerializeField] SimpleRewardPopup rewardPopup;
     [SerializeField] Camera worldCamera;
     [SerializeField] int pickupRadius = 1;
     [SerializeField] HerbType fallbackHerbType = HerbType.BellLeaf;
@@ -123,6 +124,10 @@ public class HerbPickupController : MonoBehaviour
             pickedType = fallbackHerbType;
 
         inventory.AddHerb(pickedType);
+
+        if (rewardPopup != null)
+            rewardPopup.Show(GetHerbDisplayName(pickedType));
+
         return true;
     }
 
@@ -225,6 +230,29 @@ public class HerbPickupController : MonoBehaviour
                 return true;
             default:
                 return false;
+        }
+    }
+
+    string GetHerbDisplayName(HerbType type)
+    {
+        switch (type)
+        {
+            case HerbType.BellLeaf:
+                return "Bell Leaf";
+            case HerbType.LavenderFern:
+                return "Lavender Fern";
+            case HerbType.ButtonRoot:
+                return "Button Root";
+            case HerbType.HoneyClover:
+                return "Honey Clover";
+            case HerbType.WarmNettle:
+                return "Warm Nettle";
+            case HerbType.SleepGrass:
+                return "Sleep Grass";
+            case HerbType.Glowberry:
+                return "Glowberry";
+            default:
+                return "Herb";
         }
     }
 
