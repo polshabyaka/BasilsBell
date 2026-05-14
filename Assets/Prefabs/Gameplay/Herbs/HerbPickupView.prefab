@@ -140,5 +140,5 @@ MonoBehaviour:
   buttonRootSprite: {fileID: 21300000, guid: ee71995334181884ea5011f5dd75d1e7, type: 3}
   honeyCloverSprite: {fileID: 21300000, guid: 39fd9cc5f2fb64942b8429406193719e, type: 3}
   warmNettleSprite: {fileID: 21300000, guid: 990d6435cb39ba040a058dfa519cdd1e, type: 3}
-  sleepGrassSprite: {fileID: 21300000, guid: 990d6435cb39ba040a058dfa519cdd1e, type: 3}
+  sleepGrassSprite: {fileID: 21300000, guid: 3222e64ba58e46046b5c3999bea4cbe9, type: 3}
   glowberrySprite: {fileID: 21300000, guid: 898c22e934372524c9f2564ffe6d7193, type: 3}
