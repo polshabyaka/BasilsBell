@@ -331,7 +331,7 @@ public class SimpleCauldronController : MonoBehaviour
 
         Sprite emptySprite = emptySlotSprite != null ? emptySlotSprite : fallbackEmptySprite;
         slotImage.sprite = emptySprite;
-        slotImage.enabled = emptySprite != null;
+        slotImage.enabled = true;
     }
 
     Sprite GetSelectedSpriteAt(int index)
