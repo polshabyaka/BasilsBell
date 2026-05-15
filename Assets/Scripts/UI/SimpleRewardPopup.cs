@@ -23,11 +23,16 @@ public class SimpleRewardPopup : MonoBehaviour
 
     public void Show(string itemName)
     {
+        Show("You got", itemName);
+    }
+
+    public void Show(string title, string body)
+    {
         if (titleText != null)
-            titleText.text = "You got";
+            titleText.text = title;
 
         if (bodyText != null)
-            bodyText.text = itemName;
+            bodyText.text = body;
 
         if (popupRoot != null)
             popupRoot.SetActive(true);

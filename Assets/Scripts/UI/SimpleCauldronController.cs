@@ -14,6 +14,32 @@ public class SimpleCauldronController : MonoBehaviour
     [Header("Reward Popup")]
     [SerializeField] SimpleRewardPopup rewardPopup;
 
+    [Header("Brew Timing")]
+    [SerializeField] Vector2 brewTimeSeconds = new Vector2(10f, 15f);
+
+    [Header("Cauldron Visuals")]
+    [SerializeField] Image cauldronImage;
+    [SerializeField] Sprite idleCauldronSprite;
+    [SerializeField] Sprite brewingCauldronSprite;
+    [SerializeField] Sprite readyCauldronSprite;
+    [SerializeField] float readyVisualSeconds = 2f;
+
+    [Header("Smoke Visuals")]
+    [SerializeField] bool createSmokeImageIfMissing = true;
+    [SerializeField] Image smokeImage;
+    [SerializeField] Sprite smokeSpriteA;
+    [SerializeField] Sprite smokeSpriteB;
+    [SerializeField] float smokeFrameSeconds = 0.35f;
+    [SerializeField] Vector2 generatedSmokeOffset = new Vector2(0f, 120f);
+    [SerializeField] Vector2 generatedSmokeSize = new Vector2(180f, 180f);
+
+    [Header("Shop Panel Visuals")]
+    [SerializeField] Image shopCauldronImage;
+    [SerializeField] bool createShopSmokeImageIfMissing = true;
+    [SerializeField] Image shopSmokeImage;
+    [SerializeField] Vector2 generatedShopSmokeOffset = new Vector2(0f, 120f);
+    [SerializeField] Vector2 generatedShopSmokeSize = new Vector2(180f, 180f);
+
     [Header("Herb Buttons")]
     [SerializeField] Button bellLeafButton;
     [SerializeField] Button lavenderFernButton;
@@ -61,23 +87,82 @@ public class SimpleCauldronController : MonoBehaviour
     Sprite slot1EmptySprite;
     Sprite slot2EmptySprite;
     Sprite slot3EmptySprite;
+    Sprite defaultCauldronSprite;
+    Sprite defaultSmokeSprite;
+    Sprite defaultShopCauldronSprite;
+    Sprite defaultShopSmokeSprite;
     bool cachedEmptySlotSprites;
+    bool cachedVisualSprites;
+
+    bool isBrewing;
+    float brewCompleteTime;
+    float readyVisualEndTime;
+    RemedyType pendingRemedy;
+    int pendingRemedyAmount;
+    string pendingRewardName;
+    BrewTicker brewTicker;
 
     void Start()
     {
-        CacheEmptySlotSprites();
+        CacheSprites();
         ConnectButtonListeners();
         RefreshUI();
     }
 
     void OnEnable()
     {
-        CacheEmptySlotSprites();
+        CacheSprites();
+
+        if (isBrewing)
+            EnsureBrewTicker();
+
+        if (isBrewing && Time.time >= brewCompleteTime)
+        {
+            FinishBrew();
+            return;
+        }
+
         RefreshUI();
+    }
+
+    void Update()
+    {
+        TickBrew();
+    }
+
+    void OnDestroy()
+    {
+        StopBrewTicker();
+    }
+
+    void TickBrew()
+    {
+        if (isBrewing)
+        {
+            float remainingSeconds = brewCompleteTime - Time.time;
+            if (remainingSeconds <= 0f)
+            {
+                FinishBrew();
+                return;
+            }
+
+            RefreshBrewTimerText(remainingSeconds);
+            RefreshVisuals();
+            return;
+        }
+
+        if (readyVisualEndTime > 0f && Time.time >= readyVisualEndTime)
+        {
+            readyVisualEndTime = 0f;
+            RefreshVisuals();
+        }
     }
 
     public void SelectHerb(HerbType type)
     {
+        if (isBrewing)
+            return;
+
         if (selectedHerbs.Count >= MaxSelectedHerbs)
             return;
 
@@ -89,20 +174,22 @@ public class SimpleCauldronController : MonoBehaviour
         selectedHerbs.Add(type);
 
         if (brewResultText != null)
-            brewResultText.text = "";
+            SetBrewResultText("", false);
 
         RefreshUI();
     }
 
     public void Brew()
     {
+        if (isBrewing)
+            return;
+
         if (selectedHerbs.Count == 0)
             return;
 
         if (herbInventory == null || remedyInventory == null)
         {
-            if (brewResultText != null)
-                brewResultText.text = "Missing inventory reference";
+            SetBrewResultText("Missing inventory reference", true);
 
             RefreshUI();
             return;
@@ -110,38 +197,59 @@ public class SimpleCauldronController : MonoBehaviour
 
         if (!HasEnoughSelectedHerbs())
         {
-            if (brewResultText != null)
-                brewResultText.text = "Not enough herbs";
+            SetBrewResultText("Not enough herbs", true);
 
             RefreshUI();
             return;
         }
 
-        RemedyType remedy = GetRemedyForSelection();
-        int remedyAmount = GetRemedyAmountForSelection(remedy);
+        pendingRemedy = GetRemedyForSelection();
+        pendingRemedyAmount = GetRemedyAmountForSelection(pendingRemedy);
+        pendingRewardName = FormatRewardName(GetRemedyDisplayName(pendingRemedy), pendingRemedyAmount);
+
         for (int i = 0; i < selectedHerbs.Count; i++)
         {
             herbInventory.TrySpendHerb(selectedHerbs[i]);
         }
 
-        remedyInventory.AddRemedy(remedy, remedyAmount);
+        isBrewing = true;
+        brewCompleteTime = Time.time + GetRandomBrewDuration();
+        readyVisualEndTime = 0f;
 
-        string remedyName = GetRemedyDisplayName(remedy);
-        ClearSelection();
+        EnsureBrewTicker();
+        RefreshUI();
+        RefreshBrewTimerText(brewCompleteTime - Time.time);
+    }
 
-        if (brewResultText != null)
-            brewResultText.text = FormatRewardName(remedyName, remedyAmount);
+    void FinishBrew()
+    {
+        if (!isBrewing)
+            return;
+
+        isBrewing = false;
+        readyVisualEndTime = Time.time + Mathf.Max(0f, readyVisualSeconds);
+
+        if (remedyInventory != null)
+            remedyInventory.AddRemedy(pendingRemedy, pendingRemedyAmount);
+
+        selectedHerbs.Clear();
+
+        SetBrewResultText(pendingRewardName + " is ready", true);
 
         if (rewardPopup != null)
-            rewardPopup.Show(FormatRewardName(remedyName, remedyAmount));
+            rewardPopup.Show("Potion Ready", pendingRewardName);
+
+        RefreshUI();
     }
 
     public void ClearSelection()
     {
+        if (isBrewing)
+            return;
+
         selectedHerbs.Clear();
 
-        if (brewResultText != null)
-            brewResultText.text = "";
+        SetBrewResultText("", false);
 
         RefreshUI();
     }
@@ -151,6 +259,7 @@ public class SimpleCauldronController : MonoBehaviour
         RefreshCountTexts();
         RefreshSlots();
         RefreshButtons();
+        RefreshVisuals();
     }
 
     public void RefreshSlots()
@@ -329,15 +438,21 @@ public class SimpleCauldronController : MonoBehaviour
         SetHerbButtonInteractable(glowberryButton, HerbType.Glowberry);
 
         if (brewButton != null)
-            brewButton.interactable = selectedHerbs.Count > 0;
+            brewButton.interactable = !isBrewing && selectedHerbs.Count > 0;
 
         if (clearSelectionButton != null)
-            clearSelectionButton.interactable = selectedHerbs.Count > 0;
+            clearSelectionButton.interactable = !isBrewing && selectedHerbs.Count > 0;
     }
 
     void SetHerbButtonInteractable(Button button, HerbType type)
     {
         if (button == null) return;
+
+        if (isBrewing)
+        {
+            button.interactable = false;
+            return;
+        }
 
         int ownedCount = GetOwnedCount(type);
         int selectedCount = GetSelectedCount(type);
@@ -364,6 +479,95 @@ public class SimpleCauldronController : MonoBehaviour
         Sprite emptySprite = emptySlotSprite != null ? emptySlotSprite : fallbackEmptySprite;
         slotImage.sprite = emptySprite;
         slotImage.enabled = true;
+    }
+
+    void RefreshBrewTimerText(float remainingSeconds)
+    {
+        int shownSeconds = Mathf.Max(1, Mathf.CeilToInt(remainingSeconds));
+        SetBrewResultText("Brewing... " + shownSeconds + "s", true);
+    }
+
+    void SetBrewResultText(string text, bool visible)
+    {
+        if (brewResultText == null)
+            return;
+
+        brewResultText.text = text;
+        brewResultText.gameObject.SetActive(visible);
+    }
+
+    void RefreshVisuals()
+    {
+        RefreshCauldronVisual(cauldronImage, defaultCauldronSprite);
+        RefreshCauldronVisual(shopCauldronImage, defaultShopCauldronSprite);
+        RefreshSmokeVisual(smokeImage);
+        RefreshSmokeVisual(shopSmokeImage);
+    }
+
+    void RefreshCauldronVisual(Image targetImage, Sprite fallbackSprite)
+    {
+        if (targetImage == null)
+            return;
+
+        if (isBrewing)
+        {
+            SetImageSprite(targetImage, brewingCauldronSprite, idleCauldronSprite, fallbackSprite);
+            return;
+        }
+
+        if (readyVisualEndTime > 0f && Time.time < readyVisualEndTime)
+        {
+            SetImageSprite(targetImage, readyCauldronSprite, brewingCauldronSprite, idleCauldronSprite, fallbackSprite);
+            return;
+        }
+
+        SetImageSprite(targetImage, idleCauldronSprite, fallbackSprite);
+    }
+
+    void RefreshSmokeVisual(Image targetImage)
+    {
+        if (targetImage == null)
+            return;
+
+        if (!isBrewing)
+        {
+            targetImage.enabled = false;
+            return;
+        }
+
+        Sprite smokeSprite = GetCurrentSmokeSprite();
+        targetImage.sprite = smokeSprite;
+        targetImage.enabled = smokeSprite != null;
+    }
+
+    Sprite GetCurrentSmokeSprite()
+    {
+        float frameSeconds = Mathf.Max(0.05f, smokeFrameSeconds);
+        bool useSecondSprite = Mathf.FloorToInt(Time.time / frameSeconds) % 2 == 1;
+
+        if (useSecondSprite && smokeSpriteB != null)
+            return smokeSpriteB;
+
+        if (smokeSpriteA != null)
+            return smokeSpriteA;
+
+        if (smokeSpriteB != null)
+            return smokeSpriteB;
+
+        return defaultSmokeSprite;
+    }
+
+    void SetImageSprite(Image image, params Sprite[] sprites)
+    {
+        for (int i = 0; i < sprites.Length; i++)
+        {
+            if (sprites[i] == null)
+                continue;
+
+            image.sprite = sprites[i];
+            image.enabled = true;
+            return;
+        }
     }
 
     Sprite GetSelectedSpriteAt(int index)
@@ -466,6 +670,19 @@ public class SimpleCauldronController : MonoBehaviour
             && GetSelectedCount(HerbType.Glowberry) <= herbInventory.GetCount(HerbType.Glowberry);
     }
 
+    float GetRandomBrewDuration()
+    {
+        float minSeconds = Mathf.Max(0.1f, Mathf.Min(brewTimeSeconds.x, brewTimeSeconds.y));
+        float maxSeconds = Mathf.Max(minSeconds, Mathf.Max(brewTimeSeconds.x, brewTimeSeconds.y));
+        return Random.Range(minSeconds, maxSeconds);
+    }
+
+    void CacheSprites()
+    {
+        CacheEmptySlotSprites();
+        CacheVisualSprites();
+    }
+
     void CacheEmptySlotSprites()
     {
         if (cachedEmptySlotSprites)
@@ -481,5 +698,139 @@ public class SimpleCauldronController : MonoBehaviour
             slot3EmptySprite = slot3Image.sprite;
 
         cachedEmptySlotSprites = true;
+    }
+
+    void CacheVisualSprites()
+    {
+        if (cachedVisualSprites)
+            return;
+
+        if (cauldronImage != null)
+            defaultCauldronSprite = cauldronImage.sprite;
+
+        if (shopCauldronImage != null)
+            defaultShopCauldronSprite = shopCauldronImage.sprite;
+
+        EnsureSmokeImages();
+
+        if (smokeImage != null)
+            defaultSmokeSprite = smokeImage.sprite;
+
+        if (shopSmokeImage != null)
+            defaultShopSmokeSprite = shopSmokeImage.sprite;
+
+        cachedVisualSprites = true;
+    }
+
+    void EnsureSmokeImages()
+    {
+        EnsureSmokeImage(ref smokeImage, cauldronImage, createSmokeImageIfMissing, generatedSmokeOffset, generatedSmokeSize, "GeneratedSmokeImage");
+        EnsureSmokeImage(ref shopSmokeImage, shopCauldronImage, createShopSmokeImageIfMissing, generatedShopSmokeOffset, generatedShopSmokeSize, "GeneratedShopSmokeImage");
+    }
+
+    void EnsureSmokeImage(ref Image targetImage, Image parentImage, bool createIfMissing, Vector2 offset, Vector2 size, string objectName)
+    {
+        if (targetImage != null)
+            return;
+
+        if (!createIfMissing || parentImage == null)
+            return;
+
+        GameObject smokeObject = new GameObject(objectName, typeof(RectTransform));
+        smokeObject.layer = parentImage.gameObject.layer;
+        smokeObject.transform.SetParent(parentImage.transform, false);
+
+        RectTransform smokeRect = smokeObject.GetComponent<RectTransform>();
+        smokeRect.anchorMin = new Vector2(0.5f, 0.5f);
+        smokeRect.anchorMax = new Vector2(0.5f, 0.5f);
+        smokeRect.pivot = new Vector2(0.5f, 0.5f);
+        smokeRect.anchoredPosition = offset;
+        smokeRect.sizeDelta = size;
+
+        targetImage = smokeObject.AddComponent<Image>();
+        targetImage.raycastTarget = false;
+        targetImage.preserveAspect = true;
+        targetImage.enabled = false;
+    }
+
+    void EnsureBrewTicker()
+    {
+        if (brewTicker != null)
+            return;
+
+        Transform parent = null;
+        Canvas canvas = GetComponentInParent<Canvas>(true);
+        if (canvas != null)
+            parent = canvas.transform;
+
+        GameObject tickerObject = new GameObject("CauldronBrewTicker");
+        tickerObject.transform.SetParent(parent, false);
+        brewTicker = tickerObject.AddComponent<BrewTicker>();
+        brewTicker.Initialize(this);
+    }
+
+    bool ShouldKeepBrewTickerAlive()
+    {
+        return isBrewing || readyVisualEndTime > 0f;
+    }
+
+    void StopBrewTicker()
+    {
+        if (brewTicker == null)
+            return;
+
+        BrewTicker ticker = brewTicker;
+        brewTicker = null;
+
+        if (ticker != null)
+            Destroy(ticker.gameObject);
+    }
+
+    void OnValidate()
+    {
+        brewTimeSeconds.x = Mathf.Max(0.1f, brewTimeSeconds.x);
+        brewTimeSeconds.y = Mathf.Max(0.1f, brewTimeSeconds.y);
+        smokeFrameSeconds = Mathf.Max(0.05f, smokeFrameSeconds);
+        readyVisualSeconds = Mathf.Max(0f, readyVisualSeconds);
+        generatedSmokeSize.x = Mathf.Max(1f, generatedSmokeSize.x);
+        generatedSmokeSize.y = Mathf.Max(1f, generatedSmokeSize.y);
+        generatedShopSmokeSize.x = Mathf.Max(1f, generatedShopSmokeSize.x);
+        generatedShopSmokeSize.y = Mathf.Max(1f, generatedShopSmokeSize.y);
+    }
+
+    class BrewTicker : MonoBehaviour
+    {
+        SimpleCauldronController controller;
+
+        public void Initialize(SimpleCauldronController controller)
+        {
+            this.controller = controller;
+        }
+
+        void Update()
+        {
+            if (controller == null)
+            {
+                DestroyTicker();
+                return;
+            }
+
+            if (!controller.ShouldKeepBrewTickerAlive())
+            {
+                DestroyTicker();
+                return;
+            }
+
+            if (!controller.isActiveAndEnabled)
+                controller.TickBrew();
+        }
+
+        void DestroyTicker()
+        {
+            if (controller != null && controller.brewTicker == this)
+                controller.brewTicker = null;
+
+            Destroy(gameObject);
+        }
     }
 }
