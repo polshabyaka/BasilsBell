@@ -16,11 +16,31 @@ public class Player : MonoBehaviour
     // сколько клеток в секунду проезжаем, крутить в инспекторе
     public float moveSpeed = 6f;
 
+    [Header("Walk Animation")]
+    [SerializeField] SpriteRenderer spriteRenderer;
+    [SerializeField] float walkFrameSeconds = 0.16f;
+    [SerializeField] Sprite[] frontWalkSprites;
+    [SerializeField] Sprite[] backWalkSprites;
+    [SerializeField] Sprite[] leftWalkSprites;
+    [SerializeField] Sprite[] rightWalkSprites;
+
     // состояние скольжения между клетками
     bool isMoving;
     Vector3 moveFrom;
     Vector3 moveTarget;
     float moveT;
+
+    enum FacingDirection
+    {
+        Front,
+        Back,
+        Left,
+        Right
+    }
+
+    FacingDirection facingDirection = FacingDirection.Front;
+    float walkAnimationTime;
+    bool walkAnimationActive;
 
     // очередь клеток от A* — по одной за слайд
     List<Vector2Int> path;
@@ -41,6 +61,8 @@ public class Player : MonoBehaviour
     void Start()
     {
         cam = Camera.main;
+        ResolveSpriteRenderer();
+        SetIdleSprite();
     }
 
     void Update()
@@ -54,6 +76,7 @@ public class Player : MonoBehaviour
             {
                 isMoving = false;
                 transform.position = expected;
+                SetIdleSprite();
             }
         }
 
@@ -65,10 +88,15 @@ public class Player : MonoBehaviour
             {
                 transform.position = moveTarget; // ровно на клеточке стоим
                 isMoving = false;
+                if (ShouldKeepWalkPoseAfterStep())
+                    RefreshWalkSprite();
+                else
+                    SetIdleSprite();
             }
             else
             {
                 transform.position = Vector3.Lerp(moveFrom, moveTarget, moveT);
+                RefreshWalkSprite();
             }
             return; // пока едем — ничего не слушаем, а то застрянем посерединке
         }
@@ -168,6 +196,8 @@ public class Player : MonoBehaviour
         if (grid.cells[nx, ny].type == CellType.Forest) return;
         if (grid.HasActiveLootAt(nx, ny)) return;
 
+        SetFacingDirection(nx - gridX, ny - gridY);
+
         gridX = nx;
         gridY = ny;
 
@@ -177,7 +207,11 @@ public class Player : MonoBehaviour
         moveFrom = transform.position;
         moveTarget = grid.GridToWorld(gridX, gridY);
         moveT = 0f;
+        if (!walkAnimationActive)
+            walkAnimationTime = 0f;
+
         isMoving = true;
+        RefreshWalkSprite();
     }
 
     // очистить очередь автопути — зовётся и самим игроком, и GridManager при R
@@ -198,5 +232,94 @@ public class Player : MonoBehaviour
             isMoving = false;
         }
         moveT = 0f;
+        SetIdleSprite();
+    }
+
+    void ResolveSpriteRenderer()
+    {
+        if (spriteRenderer == null)
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+    }
+
+    void SetFacingDirection(int dx, int dy)
+    {
+        if (dx > 0)
+            facingDirection = FacingDirection.Right;
+        else if (dx < 0)
+            facingDirection = FacingDirection.Left;
+        else if (dy > 0)
+            facingDirection = FacingDirection.Back;
+        else if (dy < 0)
+            facingDirection = FacingDirection.Front;
+    }
+
+    void RefreshWalkSprite()
+    {
+        if (spriteRenderer == null)
+            return;
+
+        Sprite[] frames = GetFramesForFacing();
+        if (frames == null || frames.Length == 0)
+            return;
+
+        walkAnimationActive = true;
+        walkAnimationTime += Time.deltaTime;
+        int firstWalkFrame = frames.Length > 1 ? 1 : 0;
+        int walkFrameCount = frames.Length - firstWalkFrame;
+        int frameIndex = firstWalkFrame + Mathf.FloorToInt(walkAnimationTime / Mathf.Max(0.01f, walkFrameSeconds)) % walkFrameCount;
+        if (frames[frameIndex] != null)
+            spriteRenderer.sprite = frames[frameIndex];
+    }
+
+    void SetIdleSprite()
+    {
+        if (spriteRenderer == null)
+            return;
+
+        Sprite[] frames = GetFramesForFacing();
+        if (frames == null || frames.Length == 0 || frames[0] == null)
+            return;
+
+        walkAnimationActive = false;
+        walkAnimationTime = 0f;
+        spriteRenderer.sprite = frames[0];
+    }
+
+    bool ShouldKeepWalkPoseAfterStep()
+    {
+        if (HasQueuedPath)
+            return true;
+
+        if (inputLocked)
+            return false;
+
+        return Input.GetKey(KeyCode.W)
+            || Input.GetKey(KeyCode.UpArrow)
+            || Input.GetKey(KeyCode.S)
+            || Input.GetKey(KeyCode.DownArrow)
+            || Input.GetKey(KeyCode.A)
+            || Input.GetKey(KeyCode.LeftArrow)
+            || Input.GetKey(KeyCode.D)
+            || Input.GetKey(KeyCode.RightArrow);
+    }
+
+    Sprite[] GetFramesForFacing()
+    {
+        switch (facingDirection)
+        {
+            case FacingDirection.Back:
+                return backWalkSprites;
+            case FacingDirection.Left:
+                return leftWalkSprites;
+            case FacingDirection.Right:
+                return rightWalkSprites;
+            default:
+                return frontWalkSprites;
+        }
+    }
+
+    void OnValidate()
+    {
+        walkFrameSeconds = Mathf.Max(0.01f, walkFrameSeconds);
     }
 }

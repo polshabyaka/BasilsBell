@@ -74,8 +74,8 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 20
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
-  m_Color: {r: 0.7783208, g: 0, b: 1, a: 1}
+  m_Sprite: {fileID: 21300000, guid: 4609736b39b64cb4589b6834b57484d2, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -101,4 +101,22 @@ MonoBehaviour:
   gridY: 0
   grid: {fileID: 0}
   moveSpeed: 6
+  spriteRenderer: {fileID: 2724521702779637628}
+  walkFrameSeconds: 0.16
+  frontWalkSprites:
+  - {fileID: 21300000, guid: 4609736b39b64cb4589b6834b57484d2, type: 3}
+  - {fileID: 21300000, guid: 67be120e5bebcfc47b197d69828344dc, type: 3}
+  - {fileID: 21300000, guid: bea06288bf73c154daf9cb4b3617f27c, type: 3}
+  backWalkSprites:
+  - {fileID: 21300000, guid: 64f5f9902bb71974e88ed52d82890ece, type: 3}
+  - {fileID: 21300000, guid: db5bd73d6528f6e43902310fa29dbc0a, type: 3}
+  - {fileID: 21300000, guid: e05fea84d153fa14fb1ef90e7a4b8d75, type: 3}
+  leftWalkSprites:
+  - {fileID: 21300000, guid: 2d8ecc0fbeeb6f1449a3fc5e8ff6d6d5, type: 3}
+  - {fileID: 21300000, guid: caf65a579f6380c4186825b031623386, type: 3}
+  - {fileID: 21300000, guid: e57bb8ad0476c344a90f5c8576a867d7, type: 3}
+  rightWalkSprites:
+  - {fileID: 21300000, guid: f8f665123e46bf749a7a9855fca1befd, type: 3}
+  - {fileID: 21300000, guid: 688fd3d585498964cb44cbdcb947f1be, type: 3}
+  - {fileID: 21300000, guid: c1e97b96c7c12e343861c74513782d31, type: 3}
   inputLocked: 0

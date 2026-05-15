@@ -234,7 +234,7 @@ public class SimpleCauldronController : MonoBehaviour
 
         selectedHerbs.Clear();
 
-        SetBrewResultText(pendingRewardName + " is ready", true);
+        //SetBrewResultText(pendingRewardName + " is ready", true);
 
         if (rewardPopup != null)
             rewardPopup.Show("Potion Ready", pendingRewardName);
