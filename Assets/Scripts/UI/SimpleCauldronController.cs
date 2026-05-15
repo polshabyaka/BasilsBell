@@ -118,21 +118,22 @@ public class SimpleCauldronController : MonoBehaviour
         }
 
         RemedyType remedy = GetRemedyForSelection();
+        int remedyAmount = GetRemedyAmountForSelection(remedy);
         for (int i = 0; i < selectedHerbs.Count; i++)
         {
             herbInventory.TrySpendHerb(selectedHerbs[i]);
         }
 
-        remedyInventory.AddRemedy(remedy);
+        remedyInventory.AddRemedy(remedy, remedyAmount);
 
         string remedyName = GetRemedyDisplayName(remedy);
         ClearSelection();
 
         if (brewResultText != null)
-            brewResultText.text = remedyName;
+            brewResultText.text = FormatRewardName(remedyName, remedyAmount);
 
         if (rewardPopup != null)
-            rewardPopup.Show(remedyName);
+            rewardPopup.Show(FormatRewardName(remedyName, remedyAmount));
     }
 
     public void ClearSelection()
@@ -173,20 +174,33 @@ public class SimpleCauldronController : MonoBehaviour
     public RemedyType GetRemedyForSelection()
     {
         int bellLeaf = GetSelectedCount(HerbType.BellLeaf);
+        int buttonRoot = GetSelectedCount(HerbType.ButtonRoot);
+        int honeyClover = GetSelectedCount(HerbType.HoneyClover);
+        int warmNettle = GetSelectedCount(HerbType.WarmNettle);
         int lavenderFern = GetSelectedCount(HerbType.LavenderFern);
         int sleepGrass = GetSelectedCount(HerbType.SleepGrass);
+        int glowberry = GetSelectedCount(HerbType.Glowberry);
 
-        if (selectedHerbs.Count == 1 && bellLeaf == 1)
-            return RemedyType.LeafInfusion;
+        if (IsSelectionAllSame())
+            return GetSimpleRemedyForHerb(selectedHerbs[0]);
 
-        if (selectedHerbs.Count == 1 && lavenderFern == 1)
-            return RemedyType.LavenderTea;
+        if (selectedHerbs.Count == 3 && warmNettle == 1 && buttonRoot == 1 && honeyClover == 1)
+            return RemedyType.StrongColdDecoction;
 
-        if (selectedHerbs.Count == 1 && sleepGrass == 1)
-            return RemedyType.SleepyInfusion;
+        if (selectedHerbs.Count == 3 && glowberry == 1 && honeyClover == 1 && bellLeaf == 1)
+            return RemedyType.BrightBerryInfusion;
 
         if (selectedHerbs.Count == 2 && lavenderFern == 1 && sleepGrass == 1)
             return RemedyType.SweetDreamsTea;
+
+        if (selectedHerbs.Count == 2 && bellLeaf == 1 && honeyClover == 1)
+            return RemedyType.HoneyChildInfusion;
+
+        if (selectedHerbs.Count == 2 && warmNettle == 1 && honeyClover == 1)
+            return RemedyType.WarmChillTea;
+
+        if (selectedHerbs.Count == 2 && warmNettle == 1 && buttonRoot == 1)
+            return RemedyType.ThickWarmingDecoction;
 
         return RemedyType.StrangeBrew;
     }
@@ -245,10 +259,28 @@ public class SimpleCauldronController : MonoBehaviour
                 return "Leaf Infusion";
             case RemedyType.LavenderTea:
                 return "Lavender Tea";
+            case RemedyType.RootTonic:
+                return "Root Tonic";
+            case RemedyType.HoneySyrup:
+                return "Honey Syrup";
+            case RemedyType.WarmingTea:
+                return "Warming Tea";
             case RemedyType.SleepyInfusion:
                 return "Sleepy Infusion";
+            case RemedyType.GlowElixir:
+                return "Glow Elixir";
             case RemedyType.SweetDreamsTea:
                 return "Sweet Dreams Tea";
+            case RemedyType.HoneyChildInfusion:
+                return "Honey Child Infusion";
+            case RemedyType.WarmChillTea:
+                return "Warm Chill Tea";
+            case RemedyType.ThickWarmingDecoction:
+                return "Thick Warming Decoction";
+            case RemedyType.StrongColdDecoction:
+                return "Strong Cold Decoction";
+            case RemedyType.BrightBerryInfusion:
+                return "Bright Berry Infusion";
             case RemedyType.StrangeBrew:
                 return "Strange Brew";
             default:
@@ -340,6 +372,63 @@ public class SimpleCauldronController : MonoBehaviour
             return null;
 
         return GetHerbSprite(selectedHerbs[index]);
+    }
+
+    int GetRemedyAmountForSelection(RemedyType remedy)
+    {
+        if (remedy == RemedyType.StrangeBrew)
+            return 1;
+
+        if (IsSelectionAllSame())
+            return selectedHerbs.Count;
+
+        return 1;
+    }
+
+    RemedyType GetSimpleRemedyForHerb(HerbType type)
+    {
+        switch (type)
+        {
+            case HerbType.BellLeaf:
+                return RemedyType.LeafInfusion;
+            case HerbType.LavenderFern:
+                return RemedyType.LavenderTea;
+            case HerbType.ButtonRoot:
+                return RemedyType.RootTonic;
+            case HerbType.HoneyClover:
+                return RemedyType.HoneySyrup;
+            case HerbType.WarmNettle:
+                return RemedyType.WarmingTea;
+            case HerbType.SleepGrass:
+                return RemedyType.SleepyInfusion;
+            case HerbType.Glowberry:
+                return RemedyType.GlowElixir;
+            default:
+                return RemedyType.StrangeBrew;
+        }
+    }
+
+    bool IsSelectionAllSame()
+    {
+        if (selectedHerbs.Count == 0)
+            return false;
+
+        HerbType firstType = selectedHerbs[0];
+        for (int i = 1; i < selectedHerbs.Count; i++)
+        {
+            if (selectedHerbs[i] != firstType)
+                return false;
+        }
+
+        return true;
+    }
+
+    string FormatRewardName(string displayName, int amount)
+    {
+        if (amount <= 1)
+            return displayName;
+
+        return displayName + " x" + amount;
     }
 
     int GetOwnedCount(HerbType type)

@@ -14,8 +14,17 @@ public class SimpleShelfController : MonoBehaviour
     [Header("Remedy Sprites")]
     [SerializeField] Sprite leafInfusionSprite;
     [SerializeField] Sprite lavenderTeaSprite;
+    [SerializeField] Sprite rootTonicSprite;
+    [SerializeField] Sprite honeySyrupSprite;
+    [SerializeField] Sprite warmingTeaSprite;
     [SerializeField] Sprite sleepyInfusionSprite;
+    [SerializeField] Sprite glowElixirSprite;
     [SerializeField] Sprite sweetDreamsTeaSprite;
+    [SerializeField] Sprite honeyChildInfusionSprite;
+    [SerializeField] Sprite warmChillTeaSprite;
+    [SerializeField] Sprite thickWarmingDecoctionSprite;
+    [SerializeField] Sprite strongColdDecoctionSprite;
+    [SerializeField] Sprite brightBerryInfusionSprite;
     [SerializeField] Sprite strangeBrewSprite;
 
     [Header("Herb Sprites")]
@@ -49,8 +58,17 @@ public class SimpleShelfController : MonoBehaviour
 
         shownCount += AddRemedySlotIfOwned(RemedyType.LeafInfusion);
         shownCount += AddRemedySlotIfOwned(RemedyType.LavenderTea);
+        shownCount += AddRemedySlotIfOwned(RemedyType.RootTonic);
+        shownCount += AddRemedySlotIfOwned(RemedyType.HoneySyrup);
+        shownCount += AddRemedySlotIfOwned(RemedyType.WarmingTea);
         shownCount += AddRemedySlotIfOwned(RemedyType.SleepyInfusion);
+        shownCount += AddRemedySlotIfOwned(RemedyType.GlowElixir);
         shownCount += AddRemedySlotIfOwned(RemedyType.SweetDreamsTea);
+        shownCount += AddRemedySlotIfOwned(RemedyType.HoneyChildInfusion);
+        shownCount += AddRemedySlotIfOwned(RemedyType.WarmChillTea);
+        shownCount += AddRemedySlotIfOwned(RemedyType.ThickWarmingDecoction);
+        shownCount += AddRemedySlotIfOwned(RemedyType.StrongColdDecoction);
+        shownCount += AddRemedySlotIfOwned(RemedyType.BrightBerryInfusion);
         shownCount += AddRemedySlotIfOwned(RemedyType.StrangeBrew);
 
         shownCount += AddHerbSlotIfOwned(HerbType.BellLeaf);
@@ -120,10 +138,28 @@ public class SimpleShelfController : MonoBehaviour
                 return leafInfusionSprite;
             case RemedyType.LavenderTea:
                 return lavenderTeaSprite;
+            case RemedyType.RootTonic:
+                return rootTonicSprite;
+            case RemedyType.HoneySyrup:
+                return honeySyrupSprite;
+            case RemedyType.WarmingTea:
+                return warmingTeaSprite;
             case RemedyType.SleepyInfusion:
                 return sleepyInfusionSprite;
+            case RemedyType.GlowElixir:
+                return glowElixirSprite;
             case RemedyType.SweetDreamsTea:
                 return sweetDreamsTeaSprite;
+            case RemedyType.HoneyChildInfusion:
+                return honeyChildInfusionSprite;
+            case RemedyType.WarmChillTea:
+                return warmChillTeaSprite;
+            case RemedyType.ThickWarmingDecoction:
+                return thickWarmingDecoctionSprite;
+            case RemedyType.StrongColdDecoction:
+                return strongColdDecoctionSprite;
+            case RemedyType.BrightBerryInfusion:
+                return brightBerryInfusionSprite;
             case RemedyType.StrangeBrew:
                 return strangeBrewSprite;
             default:
@@ -162,10 +198,28 @@ public class SimpleShelfController : MonoBehaviour
                 return "Leaf Infusion";
             case RemedyType.LavenderTea:
                 return "Lavender Tea";
+            case RemedyType.RootTonic:
+                return "Root Tonic";
+            case RemedyType.HoneySyrup:
+                return "Honey Syrup";
+            case RemedyType.WarmingTea:
+                return "Warming Tea";
             case RemedyType.SleepyInfusion:
                 return "Sleepy Infusion";
+            case RemedyType.GlowElixir:
+                return "Glow Elixir";
             case RemedyType.SweetDreamsTea:
                 return "Sweet Dreams Tea";
+            case RemedyType.HoneyChildInfusion:
+                return "Honey Child Infusion";
+            case RemedyType.WarmChillTea:
+                return "Warm Chill Tea";
+            case RemedyType.ThickWarmingDecoction:
+                return "Thick Warming Decoction";
+            case RemedyType.StrongColdDecoction:
+                return "Strong Cold Decoction";
+            case RemedyType.BrightBerryInfusion:
+                return "Bright Berry Infusion";
             case RemedyType.StrangeBrew:
                 return "Strange Brew";
             default:
